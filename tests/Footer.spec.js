@@ -1,5 +1,5 @@
 import { test, expect } from '../Fixtures/testFixture.js';
-import { getFooterLinkItem } from '../Utils/dataProvider.js';
+import { getFooterLinkItem, getQuicklinkFooterData, getHelpSupportFooterData, getMyAccountsFooterData, getSocialMediaFooterData, getAppStoresFooterData } from '../Utils/dataProvider.js';
 
 test.describe('Footer Module Regression Tests', () => {
 
@@ -63,25 +63,23 @@ test.describe('Footer Module Regression Tests', () => {
     test('TC03 - Validate Company Logo and Contact Information', async ({ footer, page, logger }) => {
         await test.step('Verify company logo is displayed and redirection', async () => {
             await footer.scrollToFooter();
-
+            const expectedUrl = 'https://alainpharmacy.ae/';
             await expect(footer.footerLogo).toBeVisible();
             await logger.verify('Footer company logo is visible');
+            
             await footer.clickFooterLogo();
             await page.waitForTimeout(15000);
             await page.waitForLoadState('domcontentloaded');
 
-            const expectedUrl = 'https://alainpharmacy.ae/';
             const actualUrl = page.url();
-            if (actualUrl.includes('alainpharmacy.ae')) {
+            if (actualUrl === expectedUrl) {
                 await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
                 expect(actualUrl).toContain('alainpharmacy.ae');
             } else {
                 await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`);
                 expect.soft(actualUrl, `Expected URL "${expectedUrl}" but got "${actualUrl}"`).toContain('alainpharmacy.ae');
             }
-            if (!page.url().includes('alainpharmacy.ae') && !page.url().includes('alain-pharmacy.com')) {
-                await page.goto('https://alainpharmacy.ae/', { waitUntil: 'domcontentloaded' }).catch(() => null);
-            }
+            await page.goBack({ waitUntil: 'domcontentloaded' });
         });
 
         await test.step('Verify phone number logo and text are visible, clickable', async () => {
@@ -133,369 +131,162 @@ test.describe('Footer Module Regression Tests', () => {
         });
     });
 
-    // test('TC04 - Validate Quick Links in Footer Section', async ({ footer, page, logger }) => {
-    //     await test.step('Verify Quick Links section is visible in footer', async () => {
-    //         await footer.scrollToFooter();
-    //         await expect(footer.quickLinks).toBeVisible();
-    //         await expect(footer.quickLinksHeading).toBeVisible();
-    //         await logger.verify('Quick Links section is visible in the footer section');
-    //     });
+    test('TC04 - Validate Quick Links in Footer Section', async ({ footer, page, logger }) => {
+        await test.step('Verify Quick Links section is visible in footer', async () => {
+            await footer.scrollToFooter();
+            await expect(footer.quickLinks).toBeVisible();
+            await expect(footer.quickLinksHeading).toBeVisible();
+            await logger.verify('Quick Links section is visible in the footer section');
+        });
 
-    //     await test.step('Display and log all item names showing under Quick Links', async () => {
-    //         await footer.scrollToFooter();
-    //         const quickLinks = await footer.getQuickLinkItems();
-    //         await logger.verify(`Total Quick Links items retrieved: ${quickLinks.length}`);
-    //         expect(quickLinks.length).toBeGreaterThan(0);
+        await test.step('Display and log all item names showing under Quick Links', async () => {
+            await footer.scrollToFooter();
+            const quickLinks = await footer.getQuickLinkItems();
+            await logger.verify(`Total Quick Links items retrieved: ${quickLinks.length}`);
+            expect(quickLinks.length).toBeGreaterThan(0);
 
-    //         for (let i = 0; i < quickLinks.length; i++) {
-    //             await logger.verify(`Quick Link Item ${i + 1}: "${quickLinks[i]}"`);
-    //         }
-    //     });
+            for (let i = 0; i < quickLinks.length; i++) {
+                await logger.verify(`Quick Link Item ${i + 1}: "${quickLinks[i]}"`);
+            }
+        });
 
-    //     await test.step('Validate "About Us" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('Quick Links', 'About Us');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
+        const quickLinksData = getQuicklinkFooterData();
+        for (const { linkName, expectedUrl } of quickLinksData) {
+            await test.step(`Validate "${linkName}" link visibility, clickability, and URL navigation`, async () => {
+                await footer.validateFooterLink(linkName, expectedUrl, logger);
+            });
+        }
+    });
+    test('TC05 - Validate Help & Support in Footer Section', async ({ footer, page, logger }) => {
+        await test.step('Verify Help & Support section is visible in footer', async () => {
+            await footer.scrollToFooter();
+            await expect(footer.helpSupport).toBeVisible();
+            await expect(footer.helpSupportHeading).toBeVisible();
+            await logger.verify('Help & Support section is visible in the footer section');
+        });
 
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
+        await test.step('Display and log all item names showing under Help & Support', async () => {
+            await footer.scrollToFooter();
+            const helpSupportLinks = await footer.getHelpSupportItems();
+            await logger.verify(`Total Help & Support items retrieved: ${helpSupportLinks.length}`);
+            expect(helpSupportLinks.length).toBeGreaterThan(0);
 
-    //         await footer.clickFooterLink(linkName);
-    //         await page.waitForLoadState('domcontentloaded');
-    //         const actualUrl = page.url();
-    //         if (actualUrl === expectedUrl) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await page.goBack();
-    //     });
+            for (let i = 0; i < helpSupportLinks.length; i++) {
+                await logger.verify(`Help & Support Item ${i + 1}: "${helpSupportLinks[i]}"`);
+            }
+        });
 
-    //     await test.step('Validate "Health Guide" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('Quick Links', 'Health Guide');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
+        const helpSupportData = getHelpSupportFooterData();
+        for (const { linkName, expectedUrl } of helpSupportData) {
+            await test.step(`Validate "${linkName}" link visibility, clickability, and URL navigation`, async () => {
+                await footer.validateFooterLink(linkName, expectedUrl, logger);
+            });
+        }
+    });
 
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
+    test('TC06 - Validate My Accounts in Footer Section', async ({ footer, page, logger }) => {
+        await test.step('Verify My Accounts section is visible in footer', async () => {
+            await footer.scrollToFooter();
+            await expect(footer.myAccounts).toBeVisible();
+            await expect(footer.myAccountsHeading).toBeVisible();
+            await logger.verify('My Accounts section is visible in the footer section');
+        });
 
-    //         const [newPage] = await Promise.all([
-    //             page.waitForEvent('popup'),
-    //             footer.clickFooterLink(linkName)
-    //         ]);
-    //         await newPage.waitForLoadState('domcontentloaded');
-    //         const actualUrl = newPage.url();
-    //         if (actualUrl === expectedUrl) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await newPage.close();
-    //     });
+        await test.step('Display and log all item names showing under My Accounts', async () => {
+            await footer.scrollToFooter();
+            const myAccountsLinks = await footer.getMyAccountsItems();
+            await logger.verify(`Total My Accounts items retrieved: ${myAccountsLinks.length}`);
+            expect(myAccountsLinks.length).toBeGreaterThan(0);
 
-    //     await test.step('Validate "Store Locator" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('Quick Links', 'Store Locator');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
+            for (let i = 0; i < myAccountsLinks.length; i++) {
+                await logger.verify(`My Accounts Item ${i + 1}: "${myAccountsLinks[i]}"`);
+            }
+        });
 
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
-    //         const [newPage] = await Promise.all([
-    //             page.waitForEvent('popup'),
-    //             footer.clickFooterLink(linkName)
-    //         ]);
-    //         await newPage.waitForLoadState('domcontentloaded');
-    //         const actualUrl = newPage.url();
-    //         if (actualUrl === expectedUrl) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await newPage.close();
-    //     });
-
-    //     await test.step('Validate "Blogs" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('Quick Links', 'Blogs');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
-
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
-    //         const [newPage] = await Promise.all([
-    //             page.waitForEvent('popup'),
-    //             footer.clickFooterLink(linkName)
-    //         ]);
-    //         await newPage.waitForLoadState('domcontentloaded');
-    //         const actualUrl = newPage.url();
-    //         if (actualUrl === expectedUrl) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await newPage.close();
-    //     });
-    // });
-    // test('TC05 - Validate Help & Support in Footer Section', async ({ footer, page, logger }) => {
-    //     await test.step('Verify Help & Support section is visible in footer', async () => {
-    //         await footer.scrollToFooter();
-    //         await expect(footer.helpSupport).toBeVisible();
-    //         await expect(footer.helpSupportHeading).toBeVisible();
-    //         await logger.verify('Help & Support section is visible in the footer section');
-    //     });
-
-    //     await test.step('Display and log all item names showing under Help & Support', async () => {
-    //         await footer.scrollToFooter();
-    //         const helpSupportLinks = await footer.getHelpSupportItems();
-    //         await logger.verify(`Total Help & Support items retrieved: ${helpSupportLinks.length}`);
-    //         expect(helpSupportLinks.length).toBeGreaterThan(0);
-
-    //         for (let i = 0; i < helpSupportLinks.length; i++) {
-    //             await logger.verify(`Help & Support Item ${i + 1}: "${helpSupportLinks[i]}"`);
-    //         }
-    //     });
-
-    //     await test.step('Validate "Contact Us" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('Help & Support', 'Contact Us');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
-
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
-
-    //         await footer.clickFooterLink(linkName);
-    //         await page.waitForLoadState('domcontentloaded');
-    //         const actualUrl = page.url();
-    //         if (actualUrl === expectedUrl) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await page.goBack();
-    //     });
-
-    //     await test.step('Validate "FAQs" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('Help & Support', 'FAQs');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
-
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
-
-    //         await footer.clickFooterLink(linkName);
-    //         await page.waitForLoadState('domcontentloaded');
-    //         const actualUrl = page.url();
-    //         if (actualUrl === expectedUrl) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await page.goBack();
-    //     });
-
-    //     await test.step('Validate "Terms And Conditions" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('Help & Support', 'Terms And Conditions');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
-
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
-
-    //         await footer.clickFooterLink(linkName);
-    //         await page.waitForLoadState('domcontentloaded');
-    //         const actualUrl = page.url();
-    //         if (actualUrl === expectedUrl) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await page.goBack();
-    //     });
-
-    //     await test.step('Validate "Privacy Policy" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('Help & Support', 'Privacy Policy');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
-
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
-
-    //         await footer.clickFooterLink(linkName);
-    //         await page.waitForLoadState('domcontentloaded');
-    //         const actualUrl = page.url();
-    //         if (actualUrl === expectedUrl) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await page.goBack();
-    //     });
-    // });
-
-    // test('TC06 - Validate My Accounts in Footer Section', async ({ footer, page, logger }) => {
-    //     await test.step('Verify My Accounts section is visible in footer', async () => {
-    //         await footer.scrollToFooter();
-    //         await expect(footer.myAccounts).toBeVisible();
-    //         await expect(footer.myAccountsHeading).toBeVisible();
-    //         await logger.verify('My Accounts section is visible in the footer section');
-    //     });
-
-    //     await test.step('Display and log all item names showing under My Accounts', async () => {
-    //         await footer.scrollToFooter();
-    //         const myAccountsLinks = await footer.getMyAccountsItems();
-    //         await logger.verify(`Total My Accounts items retrieved: ${myAccountsLinks.length}`);
-    //         expect(myAccountsLinks.length).toBeGreaterThan(0);
-
-    //         for (let i = 0; i < myAccountsLinks.length; i++) {
-    //             await logger.verify(`My Accounts Item ${i + 1}: "${myAccountsLinks[i]}"`);
-    //         }
-    //     });
-
-    //     await test.step('Validate "Login / Register" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('My Accounts', 'Login / Register');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
-
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
-
-    //         await footer.clickFooterLink(linkName);
-    //         await page.waitForLoadState('domcontentloaded');
-    //         const actualUrl = page.url();
-    //         if (actualUrl === expectedUrl || actualUrl.includes('customer/account')) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await page.goBack();
-    //     });
-
-    //     await test.step('Validate "View Cart" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('My Accounts', 'View Cart');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
-
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
-
-    //         await footer.clickFooterLink(linkName);
-    //         await page.waitForLoadState('domcontentloaded');
-    //         const actualUrl = page.url();
-    //         if (actualUrl === expectedUrl) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await page.goBack();
-    //     });
-
-    //     await test.step('Validate "My Wishlist" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('My Accounts', 'My Wishlist');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
-
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
-
-    //         await footer.clickFooterLink(linkName);
-    //         await page.waitForLoadState('domcontentloaded');
-    //         const actualUrl = page.url();
-    //         if (actualUrl === expectedUrl || actualUrl.includes('customer/account')) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await page.goBack();
-    //     });
-
-    //     await test.step('Validate "Order History" link visibility, clickability, and URL navigation', async () => {
-    //         await footer.scrollToFooter();
-    //         const { linkName, expectedUrl } = getFooterLinkItem('My Accounts', 'Order History');
-    //         await expect(footer.getFooterLink(linkName)).toBeVisible();
-    //         await logger.verify(`"${linkName}" link is visible in footer`);
-
-    //         const isClickable = await footer.isClickable(footer.getFooterLink(linkName));
-    //         await logger.verify(`"${linkName}" link is clickable`);
-    //         expect(isClickable).toBeTruthy();
-
-    //         await footer.clickFooterLink(linkName);
-    //         await page.waitForLoadState('domcontentloaded');
-    //         const actualUrl = page.url();
-    //         if (actualUrl === expectedUrl || actualUrl.includes('customer/account')) {
-    //             await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-    //             expect(actualUrl).toBe(expectedUrl);
-    //         } else {
-    //             await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, footer.getFooterLink(linkName));
-    //             expect.soft(actualUrl).toBe(expectedUrl);
-    //         }
-    //         await page.goBack();
-    //     });
-    // });
+        const myAccountsData = getMyAccountsFooterData();
+        for (const { linkName, expectedUrl } of myAccountsData) {
+            await test.step(`Validate "${linkName}" link visibility, clickability, and URL navigation`, async () => {
+                await footer.validateFooterLink(linkName,expectedUrl,logger,
+                    (actualUrl, expectedUrl) => actualUrl === expectedUrl || actualUrl.includes('customer/account'));
+            });
+        }
+    });
     
-    // test('TC07 - Validate Newsletter Subscription in Footer Section', async ({ footer, logger }) => {
-    //     await footer.scrollToFooter();
+    test('TC07 - Validate Newsletter Subscription in Footer Section', async ({ footer, logger }) => {
+        await footer.scrollToFooter();
+        await test.step('Validate newsletter subscription field is visible in footer', async () => {
+            await expect(footer.newsletterContainer).toBeVisible();
+            await logger.verify('Newsletter subscription field is visible in the footer');
+        });
 
-    //     await test.step('Validate newsletter subscription field is visible in footer', async () => {
-    //         await expect(footer.newsletterContainer).toBeVisible();
-    //         await logger.verify('Newsletter subscription field is visible in the footer');
-    //     });
+        await test.step('Validate newsletter subscriber header visible and display text', async () => {
+            await expect(footer.newsletterHeading).toBeVisible();
+            const headingText = await footer.getNewsletterHeadingText();
+            await logger.verify(`Newsletter subscriber header is visible with text: "${headingText}"`);
+            expect(headingText.length).toBeGreaterThan(0);
+        });
 
-    //     await test.step('Validate newsletter subscriber header visible and display text in log', async () => {
-    //         await expect(footer.newsletterHeading).toBeVisible();
-    //         const headingText = await footer.getNewsletterHeadingText();
-    //         await logger.verify(`Newsletter subscriber header is visible with text: "${headingText}"`);
-    //         expect(headingText.length).toBeGreaterThan(0);
-    //     });
+        await test.step('Validate subscriber add email fields have text area and arrow icon to subscribe', async () => {
+            await expect(footer.newsletterEmailInput).toBeVisible();
+            await logger.verify('Subscriber add email input field is visible');
+            await expect(footer.newsletterSubscribeBtn).toBeVisible();
+            await logger.verify('Subscribe icon button is visible');
+        });
+    });
 
-    //     await test.step('Validate subscriber add email fields have text area and arrow icon to subscribe', async () => {
-    //         await expect(footer.newsletterEmailInput).toBeVisible();
-    //         await logger.verify('Subscriber add email input field is visible');
-    //         await expect(footer.newsletterSubscribeBtn).toBeVisible();
-    //         await logger.verify('Subscribe icon button is visible');
-    //     });
-    // });
+    test('TC08 - Validate Social Media Icons in Footer Section', async ({ footer, page, logger }) => {
+        await test.step('verify social media section is visible', async () => {
+            await footer.scrollToFooter();
+            await expect(footer.socialMediaContainer).toBeVisible();
+            await logger.verify('Social media Section is visible in footer');
+        });
+
+        // Data-driven validation of all Social Media icons
+        const socialMediaData = getSocialMediaFooterData();
+        for (const { linkName, expectedUrl } of socialMediaData) {
+            await test.step(`Validate "${linkName}" social media icon visibility, clickability, and URL navigation`, async () => {
+                await footer.validateSocialMedia(linkName, expectedUrl, logger);
+            });
+        }
+    });
+
+    test('TC09 - Validate App Stores in Footer Section', async ({ footer, page, logger }) => {
+        await test.step('Verify App Store section is visible in footer', async () => {
+            await footer.scrollToFooter();
+            await expect(footer.appStoreContainer).toBeVisible();
+            await logger.verify('App Store section is visible in footer section');
+        });
+
+        // Data-driven validation of all App Store links from Excel sheet
+        const appStoresData = getAppStoresFooterData();
+        for (const { linkName, expectedUrl } of appStoresData) {
+            await test.step(`Validate "${linkName}" link visibility, clickability, and URL navigation`, async () => {
+                await footer.validateAppStore(linkName, expectedUrl, logger);
+            });
+        }
+    });
+
+    test('TC10 - Validate License and Copyright Section in Footer', async ({ footer, logger }) => {
+        await footer.scrollToFooter();
+
+        await test.step('Validate License and Copyright section is visible in footer', async () => {
+            await expect(footer.licenseCopyrightSection).toBeVisible();
+            await logger.verify('License and Copyright section is visible in the footer');
+        });
+
+        await test.step('Validate License field is visible in footer', async () => {
+            await expect(footer.licenseField).toBeVisible();
+            const licenseText = await footer.getLicenseText();
+            await logger.verify(`License field is displayed with text: "${licenseText}"`);
+            expect(licenseText.length).toBeGreaterThan(0);
+        });
+
+        await test.step('Validate Copyright field is visible in footer', async () => {
+            await expect(footer.copyrightField).toBeVisible();
+            const copyrightText = await footer.getCopyrightText();
+            await logger.verify(`Copyright field is visible with text: "${copyrightText}"`);
+            expect(copyrightText.length).toBeGreaterThan(0);
+        });
+    });
 });
 

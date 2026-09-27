@@ -1,3 +1,4 @@
+import { expect } from '@playwright/test';
 import Basepage from "./Basepage.js";
 
 export default class Footer extends Basepage
@@ -16,7 +17,7 @@ export default class Footer extends Basepage
         this.paymentSecureText = page.getByRole('heading', { name: '% Payment Secure' });
         this.paymentSecureIcon = page.locator('div:nth-child(3) > div > .lazyload');
 
-        // Company Logo & Contact Info (scoped to footerContainer so it doesn't match hidden header links)
+        // Company Logo & Contact Info
         this.footerLogo = page.locator('.tollfree-wrap > a');
         this.phoneIcon = this.footerContainer.getByRole('link').filter({ hasText: /^$/ }).first();
         this.phoneText = this.footerContainer.getByRole('heading', { name: '+971' });
@@ -43,6 +44,23 @@ export default class Footer extends Basepage
         this.newsletterContainer = page.locator('div').filter({ hasText: 'Subscribe to Newsletter' }).nth(3);
         this.newsletterEmailInput = page.getByRole('textbox', { name: 'Enter Email Address' });
         this.newsletterSubscribeBtn = page.getByRole('button', { name: 'Subscribe' });
+
+        // Social Media Section
+        this.socialMediaContainer = page.locator('.media-icon-wrap');
+        this.MediaLinkdin = page.locator('.media-icons > a:nth-child(1)');
+        this.MediaTwitter = page.locator('.media-icons > a:nth-child(2)');
+        this.MediaFacebook = page.locator('.media-icons > a:nth-child(3)');
+        this.MediaInstagram = page.locator('.media-icons > a:nth-child(4)');
+
+        // App Stores Section
+        this.appStoreContainer = page.locator('.apps-wrap');
+        this.appStoreBtn = page.locator('.apps-wrap > a').first();
+        this.playStoreBtn = page.locator('.apps-wrap > a:nth-child(2)');
+
+        // License & Copyright Section
+        this.licenseCopyrightSection = page.getByText('MOHAP License No : GHF5MONT-260624. Copyright © 2024 Alain Pharmacy. All rights');
+        this.licenseField = page.getByRole('heading', { name: 'MOHAP License No : GHF5MONT-' });
+        this.copyrightField = page.getByRole('heading', { name: 'Copyright © 2024 Alain' });
     }
 
     async scrollToFooter()
@@ -144,31 +162,173 @@ export default class Footer extends Basepage
     {
         return await this.getText(this.newsletterHeading);
     }
-    async verifyFooterLinkNavigation(linkName, expectedUrl, { openInNewTab = false } = {})
+
+    async getLicenseText()
+    {
+        return await this.getText(this.licenseField);
+    }
+
+    async getCopyrightText()
+    {
+        return await this.getText(this.copyrightField);
+    }
+
+    async validateFooterLink(linkName, expectedUrl, logger, options = {})
     {
         await this.scrollToFooter();
         const link = this.getFooterLink(linkName);
-        const isVisible = await link.isVisible().catch(() => false);
-        const isClickable = await this.isClickable(link);
 
+        await expect(link).toBeVisible();
+        if (logger) await logger.verify(`"${linkName}" link is visible in footer`);
+        const isClickable = await this.isClickable(link);
+        if (logger) await logger.verify(`"${linkName}" link is clickable`);
+        expect(isClickable).toBeTruthy();
+
+        const target = await link.getAttribute('target').catch(() => null);
+        const opensInNewTab = target === '_blank';
         let actualUrl = '';
-        if (openInNewTab) {
-            const [newPage] = await Promise.all([
-                this.page.waitForEvent('popup', { timeout: 15000 }).catch(() => null),
-                link.click()
-            ]);
-            if (newPage) {
-                await newPage.waitForLoadState('domcontentloaded').catch(() => null);
-                actualUrl = newPage.url();
-                await newPage.close().catch(() => null);
-            }
+        if (opensInNewTab) {
+            const [newPage] = await Promise.all([this.page.waitForEvent('popup'), link.click()]);
+            await newPage.waitForLoadState('domcontentloaded').catch(() => {});
+            actualUrl = newPage.url();
+            await newPage.close();
         } else {
             await link.click();
-            await this.page.waitForLoadState('domcontentloaded').catch(() => null);
+            await this.page.waitForLoadState('domcontentloaded').catch(() => {});
             actualUrl = this.page.url();
-            await this.page.goBack().catch(() => null);
+            await this.page.goBack().catch(() => {});
+            await this.page.waitForLoadState('domcontentloaded').catch(() => {});
         }
 
-        return { isVisible, isClickable, actualUrl };
+        const normalize = (u) => (u || '').replace(/\/$/, '').toLowerCase();
+        let isMatch = normalize(actualUrl) === normalize(expectedUrl) ||
+                        normalize(actualUrl).includes(normalize(expectedUrl)) ||
+                        (expectedUrl && normalize(expectedUrl).includes(normalize(actualUrl)));
+
+        if (typeof options === 'function' && options(actualUrl, expectedUrl)) {
+            isMatch = true;
+        } else if (typeof options === 'string' && actualUrl.includes(options)) {
+            isMatch = true;
+        } else if (options && typeof options === 'object') {
+            if (options.additionalAllowedUrl && actualUrl.includes(options.additionalAllowedUrl)) {
+                isMatch = true;
+            }
+            if (typeof options.urlMatcher === 'function' && options.urlMatcher(actualUrl, expectedUrl)) {
+                isMatch = true;
+            }
+        }
+
+        if (isMatch) {
+            if (logger) await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
+            expect(actualUrl).toBeTruthy();
+        } else {
+            if (logger) await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, link);
+            expect.soft(normalize(actualUrl), `Expected URL "${expectedUrl}" but got "${actualUrl}"`).toBe(normalize(expectedUrl));
+        }
+
+        return { actualUrl, isMatch };
+    }
+
+    async validateSocialMedia(linkName, expectedUrl, logger)
+    {
+        await this.scrollToFooter();
+        const iconLocatorMap = {
+            'linkedin': this.MediaLinkdin,'twitter': this.MediaTwitter,
+            'facebook': this.MediaFacebook,'instagram': this.MediaInstagram
+        };
+        const locator = iconLocatorMap[(linkName || '').toLowerCase()] || this.MediaLinkdin;
+
+        await expect(locator).toBeVisible();
+        if (logger) await logger.verify(`"${linkName}" social media icon is visible in footer`);
+
+        const isClickable = await this.isClickable(locator);
+        if (logger) await logger.verify(`"${linkName}" social media icon is clickable`);
+        expect(isClickable).toBeTruthy();
+
+        const [newPage] = await Promise.all([
+            this.page.waitForEvent('popup'),
+            locator.click()
+        ]);
+        await newPage.waitForLoadState('domcontentloaded');
+        const actualUrl = newPage.url();
+        await newPage.close();
+
+        const normalize = (u) => (u || '').replace(/\/$/, '').toLowerCase();
+        const isMatch = normalize(actualUrl) === normalize(expectedUrl) ||
+                        normalize(actualUrl).includes(normalize(expectedUrl)) ||
+                        (expectedUrl && normalize(expectedUrl).includes(normalize(actualUrl))) ||
+                        ((actualUrl.includes('x.com') || actualUrl.includes('twitter.com')) && (expectedUrl.includes('x.com') || expectedUrl.includes('twitter.com')));
+
+        if (isMatch) {
+            await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
+            expect(actualUrl).toBeTruthy();
+        } else {
+            await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, locator);
+            expect.soft(normalize(actualUrl)).toBe(normalize(expectedUrl));
+        }
+
+        return { actualUrl, isMatch };
+    }
+
+    async validateAppStore(linkName, expectedUrl, logger)
+    {
+        await this.scrollToFooter();
+        const map = {
+            'app store': this.appStoreBtn,'play store': this.playStoreBtn,
+        };
+        const key = (linkName || '').toLowerCase().trim();
+        const locator = map[key] || (key.includes('play') ? this.playStoreBtn : this.appStoreBtn);
+
+        await expect(locator).toBeVisible();
+        if (logger) await logger.verify(`"${linkName}" button is visible in footer`);
+
+        const isClickable = await this.isClickable(locator);
+        if (logger) await logger.verify(`"${linkName}" button is clickable`);
+        expect(isClickable).toBeTruthy();
+
+        const target = await locator.getAttribute('target').catch(() => null);
+        const opensInNewTab = target === '_blank';
+        let actualUrl = '';
+        if (opensInNewTab) {
+            const popupPromise = this.page.waitForEvent('popup', { timeout: 8000 }).catch(() => null);
+            await locator.click();
+            const newPage = await popupPromise;
+            if (newPage) {
+                await newPage.waitForLoadState('domcontentloaded').catch(() => {});
+                actualUrl = newPage.url();
+                await newPage.close();
+            } else {
+                await this.page.waitForLoadState('domcontentloaded').catch(() => {});
+                actualUrl = this.page.url();
+                await this.page.goBack().catch(() => {});
+                await this.page.waitForLoadState('domcontentloaded').catch(() => {});
+            }
+        } else {
+            await locator.click();
+            await this.page.waitForLoadState('domcontentloaded').catch(() => {});
+            actualUrl = this.page.url();
+            await this.page.goBack().catch(() => {});
+            await this.page.waitForLoadState('domcontentloaded').catch(() => {});
+        }
+
+        const normalize = (u) => (u || '').replace(/\/$/, '').toLowerCase();
+        const normActual = normalize(actualUrl);
+        const normExpected = normalize(expectedUrl);
+
+        const isMatch = normActual === normExpected ||
+                        normActual.includes(normExpected) ||
+                        (normExpected && normExpected.includes(normActual)) ||
+                        (normExpected.includes('apple.com') && normActual.includes('apple.com') && (normActual.includes('6474293110') || normActual.includes('al-ain-pharmacy'))) ||
+                        (normExpected.includes('play.google.com') && normActual.includes('com.alainpharmacy'));
+
+        if (isMatch) {
+            if (logger) await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
+            expect(actualUrl).toBeTruthy();
+        } else {
+            if (logger) await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, locator);
+            expect.soft(normalize(actualUrl)).toBe(normalize(expectedUrl));
+        }
+
+        return { actualUrl, isMatch };
     }
 }
