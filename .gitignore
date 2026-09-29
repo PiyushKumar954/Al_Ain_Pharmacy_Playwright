@@ -9,6 +9,7 @@ playwright-report/
 blob-report/
 playwright/.cache/
 playwright/.auth/
+.last-run.json
 
 # Allure Reports & Results
 allure-results/
@@ -30,6 +31,8 @@ pnpm-debug.log*
 # Office / Excel Temporary Lock Files (generated when opening Excel on Windows)
 ~$*.xlsx
 ~$*.xls
+~*.xlsx
+~*.xls
 *.tmp
 *.temp
 

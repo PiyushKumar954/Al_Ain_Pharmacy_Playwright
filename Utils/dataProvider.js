@@ -49,6 +49,29 @@ export function getFooterLinkItem(sheetName, linkName, filePath = EXCEL_PATH) {
     return found || { linkName, expectedUrl: '' };
 }
 
+const LOGIN_EXCEL_PATH = './TestData/AlAin_Login.xlsx';
+
+export function getLoginData(sheetName = 'LoginData', filePath = LOGIN_EXCEL_PATH) {
+    const xlutil = new ExcelUtility(filePath);
+    const totalRows = xlutil.getRowCount(sheetName);
+    const data = [];
+
+    for (let i = 1; i <= totalRows; i++) {
+        const email = xlutil.getCellData(sheetName, i, 0);
+        const password = xlutil.getCellData(sheetName, i, 1);
+        const expected = xlutil.getCellData(sheetName, i, 2);
+        if (email) {
+            data.push({
+                rowNum: i,
+                email: email.trim(),
+                password: password.trim(),
+                expected: expected.trim()
+            });
+        }
+    }
+    return data;
+}
+
 export default {
     getFooterData,
     getQuicklinkFooterData,
@@ -56,5 +79,6 @@ export default {
     getMyAccountsFooterData,
     getSocialMediaFooterData,
     getAppStoresFooterData,
-    getFooterLinkItem
+    getFooterLinkItem,
+    getLoginData
 };

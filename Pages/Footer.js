@@ -3,9 +3,9 @@ import Basepage from "./Basepage.js";
 
 export default class Footer extends Basepage
 {
-    constructor(page)
+    constructor(page, logger = null)
     {
-        super(page);
+        super(page, logger);
 
         this.footerContainer = page.locator('footer, .page-footer, .footer').first();
 
@@ -173,122 +173,17 @@ export default class Footer extends Basepage
         return await this.getText(this.copyrightField);
     }
 
-    async validateFooterLink(linkName, expectedUrl, logger, options = {})
-    {
+    async _verifyLinkNavigation(locator, displayName, expectedUrl, logger, options = {}) {
         await this.scrollToFooter();
-        const link = this.getFooterLink(linkName);
-
-        await expect(link).toBeVisible();
-        if (logger) await logger.verify(`"${linkName}" link is visible in footer`);
-        const isClickable = await this.isClickable(link);
-        if (logger) await logger.verify(`"${linkName}" link is clickable`);
-        expect(isClickable).toBeTruthy();
-
-        const target = await link.getAttribute('target').catch(() => null);
-        const opensInNewTab = target === '_blank';
-        let actualUrl = '';
-        if (opensInNewTab) {
-            const [newPage] = await Promise.all([this.page.waitForEvent('popup'), link.click()]);
-            await newPage.waitForLoadState('domcontentloaded').catch(() => {});
-            actualUrl = newPage.url();
-            await newPage.close();
-        } else {
-            await link.click();
-            await this.page.waitForLoadState('domcontentloaded').catch(() => {});
-            actualUrl = this.page.url();
-            await this.page.goBack().catch(() => {});
-            await this.page.waitForLoadState('domcontentloaded').catch(() => {});
-        }
-
-        const normalize = (u) => (u || '').replace(/\/$/, '').toLowerCase();
-        let isMatch = normalize(actualUrl) === normalize(expectedUrl) ||
-                        normalize(actualUrl).includes(normalize(expectedUrl)) ||
-                        (expectedUrl && normalize(expectedUrl).includes(normalize(actualUrl)));
-
-        if (typeof options === 'function' && options(actualUrl, expectedUrl)) {
-            isMatch = true;
-        } else if (typeof options === 'string' && actualUrl.includes(options)) {
-            isMatch = true;
-        } else if (options && typeof options === 'object') {
-            if (options.additionalAllowedUrl && actualUrl.includes(options.additionalAllowedUrl)) {
-                isMatch = true;
-            }
-            if (typeof options.urlMatcher === 'function' && options.urlMatcher(actualUrl, expectedUrl)) {
-                isMatch = true;
-            }
-        }
-
-        if (isMatch) {
-            if (logger) await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-            expect(actualUrl).toBeTruthy();
-        } else {
-            if (logger) await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, link);
-            expect.soft(normalize(actualUrl), `Expected URL "${expectedUrl}" but got "${actualUrl}"`).toBe(normalize(expectedUrl));
-        }
-
-        return { actualUrl, isMatch };
-    }
-
-    async validateSocialMedia(linkName, expectedUrl, logger)
-    {
-        await this.scrollToFooter();
-        const iconLocatorMap = {
-            'linkedin': this.MediaLinkdin,'twitter': this.MediaTwitter,
-            'facebook': this.MediaFacebook,'instagram': this.MediaInstagram
-        };
-        const locator = iconLocatorMap[(linkName || '').toLowerCase()] || this.MediaLinkdin;
-
-        await expect(locator).toBeVisible();
-        if (logger) await logger.verify(`"${linkName}" social media icon is visible in footer`);
-
+        await this.toBeVisible(locator, displayName, logger);
         const isClickable = await this.isClickable(locator);
-        if (logger) await logger.verify(`"${linkName}" social media icon is clickable`);
-        expect(isClickable).toBeTruthy();
-
-        const [newPage] = await Promise.all([
-            this.page.waitForEvent('popup'),
-            locator.click()
-        ]);
-        await newPage.waitForLoadState('domcontentloaded');
-        const actualUrl = newPage.url();
-        await newPage.close();
-
-        const normalize = (u) => (u || '').replace(/\/$/, '').toLowerCase();
-        const isMatch = normalize(actualUrl) === normalize(expectedUrl) ||
-                        normalize(actualUrl).includes(normalize(expectedUrl)) ||
-                        (expectedUrl && normalize(expectedUrl).includes(normalize(actualUrl))) ||
-                        ((actualUrl.includes('x.com') || actualUrl.includes('twitter.com')) && (expectedUrl.includes('x.com') || expectedUrl.includes('twitter.com')));
-
-        if (isMatch) {
-            await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
-            expect(actualUrl).toBeTruthy();
-        } else {
-            await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, locator);
-            expect.soft(normalize(actualUrl)).toBe(normalize(expectedUrl));
-        }
-
-        return { actualUrl, isMatch };
-    }
-
-    async validateAppStore(linkName, expectedUrl, logger)
-    {
-        await this.scrollToFooter();
-        const map = {
-            'app store': this.appStoreBtn,'play store': this.playStoreBtn,
-        };
-        const key = (linkName || '').toLowerCase().trim();
-        const locator = map[key] || (key.includes('play') ? this.playStoreBtn : this.appStoreBtn);
-
-        await expect(locator).toBeVisible();
-        if (logger) await logger.verify(`"${linkName}" button is visible in footer`);
-
-        const isClickable = await this.isClickable(locator);
-        if (logger) await logger.verify(`"${linkName}" button is clickable`);
+        if (logger) await logger.verify(`${displayName} is clickable`);
         expect(isClickable).toBeTruthy();
 
         const target = await locator.getAttribute('target').catch(() => null);
         const opensInNewTab = target === '_blank';
         let actualUrl = '';
+
         if (opensInNewTab) {
             const popupPromise = this.page.waitForEvent('popup', { timeout: 8000 }).catch(() => null);
             await locator.click();
@@ -315,20 +210,56 @@ export default class Footer extends Basepage
         const normActual = normalize(actualUrl);
         const normExpected = normalize(expectedUrl);
 
-        const isMatch = normActual === normExpected ||
-                        normActual.includes(normExpected) ||
-                        (normExpected && normExpected.includes(normActual)) ||
-                        (normExpected.includes('apple.com') && normActual.includes('apple.com') && (normActual.includes('6474293110') || normActual.includes('al-ain-pharmacy'))) ||
-                        (normExpected.includes('play.google.com') && normActual.includes('com.alainpharmacy'));
-
+        let isMatch = normActual === normExpected ||normActual.includes(normExpected) ||
+                      (normExpected && normExpected.includes(normActual));
+        if (!isMatch) {
+            if ((normActual.includes('x.com') || normActual.includes('twitter.com')) && (normExpected.includes('x.com') || normExpected.includes('twitter.com'))) {
+                isMatch = true;
+            } else if (normExpected.includes('apple.com') && normActual.includes('apple.com') && (normActual.includes('6474293110') || normActual.includes('al-ain-pharmacy'))) {
+                isMatch = true;
+            } else if (normExpected.includes('play.google.com') && normActual.includes('com.alainpharmacy')) {
+                isMatch = true;
+            }
+        }
+        if (!isMatch) {
+            if (typeof options === 'function' && options(actualUrl, expectedUrl)) {
+                isMatch = true;
+            } else if (typeof options === 'string' && actualUrl.includes(options)) {
+                isMatch = true;
+            } else if (options && typeof options === 'object') {
+                if (options.additionalAllowedUrl && actualUrl.includes(options.additionalAllowedUrl)) isMatch = true;
+                if (typeof options.urlMatcher === 'function' && options.urlMatcher(actualUrl, expectedUrl)) isMatch = true;
+            }
+        }
         if (isMatch) {
             if (logger) await logger.verify(`Pass: Actual URL "${actualUrl}" matches expected URL "${expectedUrl}"`);
             expect(actualUrl).toBeTruthy();
         } else {
+            await this.highlight(locator);
             if (logger) await logger.verify(`Fail: Expected URL "${expectedUrl}" but got "${actualUrl}"`, locator);
-            expect.soft(normalize(actualUrl)).toBe(normalize(expectedUrl));
+            expect.soft(normActual, `Expected URL "${expectedUrl}" but got "${actualUrl}"`).toBe(normExpected);
         }
 
         return { actualUrl, isMatch };
+    }
+
+    async validateFooterLink(linkName, expectedUrl, logger, options = {}) {
+        return await this._verifyLinkNavigation(this.getFooterLink(linkName), `"${linkName}" link`, expectedUrl, logger, options);
+    }
+
+    async validateSocialMedia(linkName, expectedUrl, logger) {
+        const iconLocatorMap = {
+            'linkedin': this.MediaLinkdin, 'twitter': this.MediaTwitter,
+            'facebook': this.MediaFacebook, 'instagram': this.MediaInstagram
+        };
+        const locator = iconLocatorMap[(linkName || '').toLowerCase()] || this.MediaLinkdin;
+        return await this._verifyLinkNavigation(locator, `"${linkName}" social media icon`, expectedUrl, logger);
+    }
+
+    async validateAppStore(linkName, expectedUrl, logger) {
+        const map = { 'app store': this.appStoreBtn, 'play store': this.playStoreBtn };
+        const key = (linkName || '').toLowerCase().trim();
+        const locator = map[key] || (key.includes('play') ? this.playStoreBtn : this.appStoreBtn);
+        return await this._verifyLinkNavigation(locator, `"${linkName}" button`, expectedUrl, logger);
     }
 }

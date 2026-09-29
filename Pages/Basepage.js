@@ -1,10 +1,14 @@
 import { highlightElement, removeHighlight } from "../Utils/highlighter.js";
+import { expect } from "@playwright/test";
 
 export default class Basepage
 {
-    constructor(page)
-    {
+    constructor(page, logger = null) {
         this.page = page;
+        this.logger = logger;
+    }
+    setLogger(logger) {
+        this.logger = logger;
     }
 
     async navigateTo(url)
@@ -77,5 +81,16 @@ export default class Basepage
     async removeHighlight(locator)
     {
         await removeHighlight(locator);
+    }
+
+    async toBeVisible(locator, elementName, logger = this.logger) {
+        try {
+            await expect(locator).toBeVisible();
+            await logger.verify(`Pass: ${elementName} is visible`);
+            return true;
+        } catch (error) {
+            await logger.verify(`Fail: ${elementName} is not visible`);
+            throw error;
+        }
     }
 }
