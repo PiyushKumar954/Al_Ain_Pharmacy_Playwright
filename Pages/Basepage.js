@@ -7,6 +7,7 @@ export default class Basepage
         this.page = page;
         this.logger = logger;
     }
+
     setLogger(logger) {
         this.logger = logger;
     }
@@ -16,18 +17,13 @@ export default class Basepage
         await this.page.goto(url);
     }
 
-    async click(locator)
-    {
+    async click(locator) {
         await locator.click();
     }
-
-    async fill(locator, value)
-    {
+    async sendKeys(locator, value) {
         await locator.fill(value);
     }
-
-    async getText(locator)
-    {
+    async getText(locator) {
         const text = await locator.textContent();
         return text ? text.trim() : '';
     }
@@ -86,10 +82,10 @@ export default class Basepage
     async toBeVisible(locator, elementName, logger = this.logger) {
         try {
             await expect(locator).toBeVisible();
-            await logger.verify(`Pass: ${elementName} is visible`);
+            if (logger) await logger.verify(`Pass: ${elementName} is visible`);
             return true;
         } catch (error) {
-            await logger.verify(`Fail: ${elementName} is not visible`);
+            if (logger) await logger.verify(`Fail: ${elementName} is not visible`);
             throw error;
         }
     }

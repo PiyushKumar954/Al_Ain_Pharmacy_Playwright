@@ -54,3 +54,7 @@ ehthumbs.db
 *.sublime-workspace
 *.swp
 *.swo
+
+# Sensitive Test Data & User Credentials
+TestData/users.json
+TestData/users.jason

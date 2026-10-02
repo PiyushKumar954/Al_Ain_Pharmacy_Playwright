@@ -1,31 +1,25 @@
 import { test, expect } from '../Fixtures/testFixture.js';
-import { getLoginData } from '../Utils/dataProvider.js';
 
 async function navigateToLogin(header) {
-    if (await header.loginBtn.isVisible().catch(() => false)) {
-        await header.loginBtn.click();
-    } else {
-        await header.page.goto('https://alainpharmacy.ae/customer/account/login/');
-    }
+    await header.clickLogin();
 }
 
 test.describe('Login Module Regression Tests', () => {
-
     test('TC01 - Navigate to Login Page and verify page title', async ({ header, page, logger }) => {
         await navigateToLogin(header);
         await page.waitForLoadState('domcontentloaded');
-            const pageTitle = await page.title();
-            const expectedTitle = 'Customer Login';
-            if (pageTitle.includes(expectedTitle)) {
-                await logger.verify(`Pass: Page title "${pageTitle}" matches expected "${expectedTitle}"`);
-                expect(pageTitle).toContain(expectedTitle);
-            } else {
-                await logger.verify(`Fail: Expected page title to contain "${expectedTitle}" but got "${pageTitle}"`);
-                throw new Error(`Fail: Expected page title to contain "${expectedTitle}" but got "${pageTitle}"`);
-            }
+        const pageTitle = await page.title();
+        const expectedTitle = 'Customer Login';
+        if (pageTitle.includes(expectedTitle)) {
+            await logger.verify(`Pass: Page title "${pageTitle}" matches expected "${expectedTitle}"`);
+            expect(pageTitle).toContain(expectedTitle);
+        } else {
+            await logger.verify(`Fail: Expected page title to contain "${expectedTitle}" but got "${pageTitle}"`);
+            throw new Error(`Fail: Expected page title to contain "${expectedTitle}" but got "${pageTitle}"`);
+        }
     });
 
-    test('TC02 - Validate Areas Displaying on Login Page', async ({ header,loginPage, logger }) => {
+    test('TC02 - Validate Areas Displaying on Login Page', async ({ header, loginPage, logger }) => {
         await navigateToLogin(header);
         await test.step('Verify Breadcrumb area is visible', async () => {
             await loginPage.toBeVisible(loginPage.breadcrumb, 'Breadcrumb area', logger);
@@ -33,7 +27,7 @@ test.describe('Login Module Regression Tests', () => {
         await test.step('Verify Login/Register form is visible', async () => {
             await loginPage.toBeVisible(loginPage.loginRegisterForm, 'Login/Register form', logger);
         });
-    })
+    });
 
     test('TC03 - Validate Breadcrumb on Login Page', async ({ header, loginPage, page, logger }) => {
         await navigateToLogin(header);
@@ -61,9 +55,9 @@ test.describe('Login Module Regression Tests', () => {
             await navigateToLogin(header);
             await page.waitForLoadState('domcontentloaded');
         });
-    });   
+    });
 
-    test('TC04 - Validate Login/Register Form on Login Page', async ({ header,loginPage, logger }) => {
+    test('TC04 - Validate Login/Register Form on Login Page', async ({ header, loginPage, logger }) => {
         await navigateToLogin(header);
         await test.step('Verify Sign In or Register header is visible', async () => {
             await loginPage.toBeVisible(loginPage.signInRegisterHeader, 'Sign In or Register header', logger);
@@ -101,7 +95,7 @@ test.describe('Login Module Regression Tests', () => {
         });
     });
 
-    test('TC05 - Validate Forgot Password Navigation', async ({ header,loginPage, page, logger }) => {
+    test('TC05 - Validate Forgot Password Navigation', async ({ header, loginPage, page, logger }) => {
         await navigateToLogin(header);
         await test.step('Click on Forgot Password and verify navigation URL', async () => {
             await loginPage.clickLoginUsingPassword();
@@ -117,7 +111,7 @@ test.describe('Login Module Regression Tests', () => {
             }
         });
     });
-    
+
     test('TC06 - Validate Mandatory Fields on Login/Register Form', async ({ header, loginPage, page, logger }) => {
         await navigateToLogin(header);
         const expectedError = 'This is a required field';
@@ -175,8 +169,9 @@ test.describe('Login Module Regression Tests', () => {
     });
 
     test('TC07 - Validate Country Flag and Country Switcher on Login Page', async ({ header, loginPage, page, logger }) => {
+        test.setTimeout(120000);
         await navigateToLogin(header);
-        await page.waitForTimeout(45000);
+        await page.waitForLoadState('domcontentloaded');
 
         await test.step('Verify Country Flag is visible on Login page', async () => {
             await loginPage.toBeVisible(loginPage.countryFlag, 'Country Flag', logger);
@@ -204,8 +199,6 @@ test.describe('Login Module Regression Tests', () => {
 
             await loginPage.selectCountryOption(countryOption);
             await logger.verify(`Selected "${countryToSelect}" from dropdown list`);
-
-            // d. After selecting, make sure the country flag element title is changed to entered country (India) containing in the title if showing then pass else fail
             const updatedFlagTitle = await loginPage.getCountryFlagTitle();
             if (updatedFlagTitle && updatedFlagTitle.toLowerCase().includes(countryToSelect.toLowerCase())) {
                 await logger.verify(`Pass: Country flag title updated successfully to "${countryToSelect}"`);
@@ -215,51 +208,29 @@ test.describe('Login Module Regression Tests', () => {
                 expect(updatedFlagTitle.toLowerCase()).toContain(countryToSelect.toLowerCase());
             }
         });
-    })
-
-    // test('TC08 - Validate Login using Password with Credentials from Excel', async ({ header, loginPage, page, logger }) => {
-    //     const loginData = getLoginData();
-    //     await logger.verify('Verifying SignIn validation on Login Page with set of credentials');
-
-    //     for (const { email, password, expected } of loginData) {
-    //         await test.step(`TC07 Login Validation -> Email: "${email}", Expected: "${expected}"`, async () => {
-    //             await navigateToLogin(header);
-    //             await page.waitForLoadState('domcontentloaded');
-
-    //             await logger.verify(`Test Data -> Email: "${email}", Password: "${password}", Expected: "${expected}"`);
-
-    //             const loginSucceeded = await loginPage.loginWithCredentials(email, password);
-
-    //             if (expected.toLowerCase() === 'valid') {
-    //                 if (loginSucceeded) {
-    //                     await logger.verify(`Pass: Valid credentials - Login succeeded for: "${email}"`);
-    //                     expect(loginSucceeded).toBeTruthy();
-    //                     await loginPage.logout();
-    //                 } else {
-    //                     const errorMsg = await loginPage.getLoginErrorText();
-    //                     await loginPage.highlight(loginPage.loginGlobalError.first());
-    //                     await logger.verify(`Fail: Valid credentials failed to log in for "${email}". Error: "${errorMsg}"`, loginPage.loginGlobalError.first());
-    //                     expect.soft(loginSucceeded, `Login expected to succeed for: "${email}" but failed with error: "${errorMsg}"`).toBeTruthy();
-    //                 }
-    //             } else {
-    //                 // Invalid credentials expected
-    //                 if (!loginSucceeded) {
-    //                     const isErrorVisible = await loginPage.isLoginErrorVisible();
-    //                     const errorMsg = await loginPage.getLoginErrorText();
-    //                     if (isErrorVisible) {
-    //                         await logger.verify(`Pass: Invalid credentials - Error displayed as expected: "${errorMsg}"`);
-    //                         expect(isErrorVisible).toBeTruthy();
-    //                     } else {
-    //                         await logger.verify(`Fail: No error shown for invalid credentials: "${email}"`);
-    //                         expect.soft(isErrorVisible, `No error shown for invalid credentials: "${email}"`).toBeTruthy();
-    //                     }
-    //                 } else {
-    //                     await logger.verify(`Fail: Invalid credentials unexpectedly succeeded in logging in for: "${email}"`);
-    //                     expect.soft(loginSucceeded, `Login expected to fail for invalid credentials: "${email}"`).toBeFalsy();
-    //                     await loginPage.logout();
-    //                 }
-    //             }
-    //         });
-    //     }
-    // });
+    });
+    test('TC08 - Validate Login via OTP using Mobile Number', async ({ header, loginPage, page, logger }) => {
+        test.setTimeout(180000);
+        await navigateToLogin(header);
+        await page.waitForLoadState('domcontentloaded');
+        await loginPage.scrollIntoView(loginPage.loginRegisterForm);
+        await page.waitForTimeout(35000);
+        await loginPage.clickCountryFlag();
+        await loginPage.typeCountryName('India');
+        await page.keyboard.press('Enter');
+        await loginPage.sendEmailOrMobile('8917634469');
+        await loginPage.clickContinue();
+        await page.waitForTimeout(60000);
+        const isCustomerLoggedIn = await header.customerName.isVisible().catch(() => false);
+        if (isCustomerLoggedIn) {
+            const customerName = await header.getCustomerName();
+            await logger.verify(`Pass: Customer Name "${customerName}" is visible on header`);
+            console.log(`Pass: Customer Name: ${customerName}`);
+            expect(isCustomerLoggedIn).toBeTruthy();
+        } else {
+            await loginPage.highlight(header.customerName);
+            await logger.verify('Fail: Customer Name is not visible on header', header.customerName);
+            expect(isCustomerLoggedIn, 'Customer name should be visible on header').toBeTruthy();
+        }
+    });
 });

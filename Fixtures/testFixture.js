@@ -8,7 +8,10 @@ import Logger from '../Utils/logger.js';
 export const test = baseTest.extend(
     {
         sharedPage: [async ({ browser }, use) => {
-            const context = await browser.newContext({ viewport: null });
+            const isHeaded = browser._options?.headless === false || process.argv.includes('--headed');
+            const context = await browser.newContext({
+                viewport: isHeaded ? null : { width: 1920, height: 1080 }
+            });
             const page = await context.newPage();
             const base = new Basetest(page);
             await base.beforeTest();
@@ -23,9 +26,9 @@ export const test = baseTest.extend(
             await use(sharedPage);
         },
 
-        header: async ({ page }, use) => 
+        header: async ({ page, logger }, use) => 
         {
-            await use(new Header(page));
+            await use(new Header(page, logger));
         },
 
         loginPage: async ({ page, logger }, use) => {
